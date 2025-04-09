@@ -1,0 +1,4 @@
+.react-diagram__node.selected {
+   transition: opacity 0.3s;
+   opacity: 0.7;
+}

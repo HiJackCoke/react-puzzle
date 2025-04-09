@@ -1,0 +1,9 @@
+input {
+  width: 80%;
+}
+
+.dnd-container {
+  display: flex;
+
+  height: 100%;
+}
