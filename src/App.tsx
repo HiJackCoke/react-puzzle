@@ -17,13 +17,10 @@ import PuzzleSidebar from "./components/PuzzleSidebar";
 import "react-cosmos-diagram/dist/style.css";
 import { EdgePosition } from "./components/PuzzleGenerator/type";
 import { isOppositePosition } from "./components/PuzzleGenerator/utils";
-
-interface ClosestConnection {
-  draggedNode: Node<NodeData>;
-  targetNode: Node<NodeData>;
-  draggedEdgePosition: EdgePosition;
-  targetEdgePosition: EdgePosition;
-}
+import {
+  findClosestConnection,
+  getSnapPosition,
+} from "./components/PuzzleNode/utils";
 
 const connectionRadius = 30;
 
@@ -258,131 +255,42 @@ function App() {
 
   const onNodeDrag = useCallback(
     (_: unknown, node: Node) => {
-      const draggedNode = node as Node<NodeData>;
-      const draggedPiece = draggedNode.data.piece;
+      const closestConnection = findClosestConnection(
+        node as Node<NodeData>,
+        nodes,
+        pieceSizeRef.current.pieceSize,
+        connectionRadius
+      );
 
-      const getPortPosition = (node: Node<NodeData>, edge: EdgePosition) => {
-        switch (edge) {
-          case "left":
-            return {
-              x: node.position.x,
-              y: node.position.y + pieceSizeRef.current.pieceSize / 2,
-            };
-          case "right":
-            return {
-              x: node.position.x + pieceSizeRef.current.pieceSize,
-              y: node.position.y + pieceSizeRef.current.pieceSize / 2,
-            };
-          case "top":
-            return {
-              x: node.position.x + pieceSizeRef.current.pieceSize / 2,
-              y: node.position.y,
-            };
-          case "bottom":
-            return {
-              x: node.position.x + pieceSizeRef.current.pieceSize / 2,
-              y: node.position.y + pieceSizeRef.current.pieceSize,
-            };
-        }
-      };
+      if (!closestConnection) return;
 
-      const getDistance = (
-        p1: { x: number; y: number },
-        p2: { x: number; y: number }
-      ) => {
-        return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
-      };
+      const {
+        draggedNode,
+        targetNode,
+        draggedEdgePosition,
+        targetEdgePosition,
+      } = closestConnection;
 
-      let closestConnection: ClosestConnection | null = null;
-      let minDistance = connectionRadius / 2;
+      const snapPosition = getSnapPosition(
+        targetNode,
+        draggedEdgePosition,
+        pieceSizeRef.current.pieceSize
+      );
 
-      nodes.forEach((targetNode) => {
-        if (targetNode.id === node.id) return;
-
-        const targetPiece = targetNode.data.piece;
-
-        Object.entries(draggedPiece.edge).forEach(
-          ([draggedEdge, draggedValue]) => {
-            const draggedEdgePosition = draggedEdge as EdgePosition;
-            Object.entries(targetPiece.edge).forEach(
-              ([targetEdge, targetValue]) => {
-                const targetEdgePosition = targetEdge as EdgePosition;
-                if (
-                  isOppositePosition(draggedEdgePosition, targetEdgePosition) &&
-                  ((draggedValue === "tab" && targetValue === "blank") ||
-                    (draggedValue === "blank" && targetValue === "tab"))
-                ) {
-                  const draggedPort = getPortPosition(
-                    draggedNode,
-                    draggedEdgePosition
-                  );
-                  const targetPort = getPortPosition(
-                    targetNode,
-                    targetEdgePosition
-                  );
-                  const distance = getDistance(draggedPort, targetPort);
-
-                  if (distance < minDistance) {
-                    minDistance = distance;
-                    closestConnection = {
-                      draggedNode,
-                      targetNode,
-                      draggedEdgePosition,
-                      targetEdgePosition,
-                    };
-                  }
-                }
-              }
-            );
+      setNodes((nds) =>
+        nds.map((n) => {
+          if (n.id === draggedNode.id) {
+            n.position = snapPosition;
+            onConnect({
+              source: draggedNode.id,
+              target: targetNode.id,
+              sourcePort: `${draggedEdgePosition}-${draggedNode.data.piece.edge[draggedEdgePosition]}`,
+              targetPort: `${targetEdgePosition}-${targetNode.data.piece.edge[targetEdgePosition]}`,
+            });
           }
-        );
-      });
-
-      if (closestConnection) {
-        const {
-          draggedNode,
-          targetNode,
-          draggedEdgePosition,
-          targetEdgePosition,
-        } = closestConnection as ClosestConnection;
-
-        let snapX = targetNode.position.x;
-        let snapY = targetNode.position.y;
-
-        switch (draggedEdgePosition) {
-          case "left":
-            snapX = targetNode.position.x + pieceSizeRef.current.pieceSize;
-            snapY = targetNode.position.y;
-            break;
-          case "right":
-            snapX = targetNode.position.x - pieceSizeRef.current.pieceSize;
-            snapY = targetNode.position.y;
-            break;
-          case "top":
-            snapX = targetNode.position.x;
-            snapY = targetNode.position.y + pieceSizeRef.current.pieceSize;
-            break;
-          case "bottom":
-            snapX = targetNode.position.x;
-            snapY = targetNode.position.y - pieceSizeRef.current.pieceSize;
-            break;
-        }
-
-        setNodes((nds) =>
-          nds.map((n) => {
-            if (n.id === draggedNode.id) {
-              n.position = { x: snapX, y: snapY };
-              onConnect({
-                source: draggedNode.id,
-                target: targetNode.id,
-                sourcePort: `${draggedEdgePosition}-${draggedNode.data.piece.edge[draggedEdgePosition]}`,
-                targetPort: `${targetEdgePosition}-${targetNode.data.piece.edge[targetEdgePosition]}`,
-              });
-            }
-            return n;
-          })
-        );
-      }
+          return n;
+        })
+      );
     },
     [nodes, onConnect]
   );
