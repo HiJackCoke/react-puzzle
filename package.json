@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "react": "^19.0.0",
-    "react-cosmos-diagram": "^0.7.0",
+    "react-cosmos-diagram": "^0.7.4",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {

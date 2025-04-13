@@ -6,16 +6,18 @@ import { CSSProperties } from "react";
 
 import "./style.css";
 
-type Props = {
+export type NodeData = {
   piece: PuzzlePiece;
   size: PieceSize;
 };
 
-const capitalizeFirstLetter = (str: Lowercase<Position>): Position => {
-  return (str[0].toUpperCase() + str.slice(1)) as Position;
+const capitalizeFirstLetter = (
+  str: Lowercase<keyof typeof Position>
+): keyof typeof Position => {
+  return (str[0].toUpperCase() + str.slice(1)) as keyof typeof Position;
 };
 
-function PuzzleNode({ data, selected }: NodeProps<Props>) {
+function PuzzleNode({ data, selected }: NodeProps<NodeData>) {
   const { piece } = data;
 
   const { id, dataUrl, edge } = piece;

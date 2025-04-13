@@ -3,39 +3,35 @@ import { DragEvent, useCallback, useRef } from "react";
 import ReactDiagram, {
   Connection,
   Edge,
+  Node,
   updateEdge,
   useEdgesState,
   useNodesState,
 } from "react-cosmos-diagram";
 
-import PuzzleNode from "./components/PuzzleNode";
+import PuzzleNode, { NodeData } from "./components/PuzzleNode";
 import { useDragContext } from "./contexts/DragContext";
 import { PieceSize } from "./components/PuzzleGenerator";
 import PuzzleSidebar from "./components/PuzzleSidebar";
 
 import "react-cosmos-diagram/dist/style.css";
+import { EdgePosition } from "./components/PuzzleGenerator/type";
+import { isOppositePosition } from "./components/PuzzleGenerator/utils";
+
+interface ClosestConnection {
+  draggedNode: Node<NodeData>;
+  targetNode: Node<NodeData>;
+  draggedEdgePosition: EdgePosition;
+  targetEdgePosition: EdgePosition;
+}
+
+const connectionRadius = 30;
 
 const nodeTypes = {
   puzzle: PuzzleNode,
 };
 
 const getId = (pieceId: number) => `puzzle-node-${pieceId}`;
-
-type Position = "left" | "right" | "top" | "bottom";
-
-const isOppositePosition = (
-  sourcePosition: Position,
-  targetPosition: Position
-): boolean => {
-  const opposites: Record<Position, Position> = {
-    left: "right",
-    right: "left",
-    top: "bottom",
-    bottom: "top",
-  };
-
-  return opposites[sourcePosition] === targetPosition;
-};
 
 const getTranslateValues = (transformString: string) => {
   const translateRegex = /translate\(\s*([^\s,]+)px\s*,\s*([^\s,]+)px\s*\)/;
@@ -71,23 +67,23 @@ function App() {
 
   const dragCtx = useDragContext();
 
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<NodeData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
   const onConnect = useCallback((params: Connection) => {
     const { source, target, sourcePort, targetPort } = params;
 
-    const sourcePosition = sourcePort?.split("-")[0] as Position;
-    const targetPosition = targetPort?.split("-")[0] as Position;
+    const draggedEdgePosition = sourcePort?.split("-")[0] as EdgePosition;
+    const targetEdgePosition = targetPort?.split("-")[0] as EdgePosition;
 
-    if (!isOppositePosition(sourcePosition, targetPosition)) return;
+    if (!isOppositePosition(draggedEdgePosition, targetEdgePosition)) return;
 
     if (target && source) {
-      const sourceNodes = nodeMap.current.get(source) ?? [];
+      const draggedNodes = nodeMap.current.get(source) ?? [];
       const targetNodes = nodeMap.current.get(target) ?? [];
 
-      const targets = new Set([...sourceNodes, ...targetNodes, target]);
-      const sources = new Set([...sourceNodes, ...targetNodes, source]);
+      const targets = new Set([...draggedNodes, ...targetNodes, target]);
+      const sources = new Set([...draggedNodes, ...targetNodes, source]);
 
       nodeMap.current.set(source, Array.from(targets));
       nodeMap.current.set(target, Array.from(sources));
@@ -102,10 +98,10 @@ function App() {
 
       const filteredConnectedNodes = [...new Set(connectedNodes)];
 
-      const sourceNode = nodes.find((node) => node.id === source);
+      const draggedNode = nodes.find((node) => node.id === source);
 
-      const sourceNodeX = sourceNode?.position.x || 0;
-      const sourceNodeY = sourceNode?.position.y || 0;
+      const draggedNodeX = draggedNode?.position.x || 0;
+      const draggedNodeY = draggedNode?.position.y || 0;
 
       const childNodes = nodes.filter((node) =>
         filteredConnectedNodes?.includes(node.id)
@@ -124,24 +120,24 @@ function App() {
 
       return nodes.map((node) => {
         if (node.id === target) {
-          if (targetPosition === "left") {
-            offsetX = sourceNodeX + pieceSizeRef.current.pieceSize;
-            offsetY = sourceNodeY;
+          if (targetEdgePosition === "left") {
+            offsetX = draggedNodeX + pieceSizeRef.current.pieceSize;
+            offsetY = draggedNodeY;
           }
 
-          if (targetPosition === "right") {
-            offsetX = sourceNodeX - pieceSizeRef.current.pieceSize;
-            offsetY = sourceNodeY;
+          if (targetEdgePosition === "right") {
+            offsetX = draggedNodeX - pieceSizeRef.current.pieceSize;
+            offsetY = draggedNodeY;
           }
 
-          if (targetPosition === "top") {
-            offsetX = sourceNodeX;
-            offsetY = sourceNodeY + pieceSizeRef.current.pieceSize;
+          if (targetEdgePosition === "top") {
+            offsetX = draggedNodeX;
+            offsetY = draggedNodeY + pieceSizeRef.current.pieceSize;
           }
 
-          if (targetPosition === "bottom") {
-            offsetX = sourceNodeX;
-            offsetY = sourceNodeY - pieceSizeRef.current.pieceSize;
+          if (targetEdgePosition === "bottom") {
+            offsetX = draggedNodeX;
+            offsetY = draggedNodeY - pieceSizeRef.current.pieceSize;
           }
 
           if (childNodes.some((childNodes) => childNodes.id === source)) {
@@ -260,13 +256,144 @@ function App() {
     event.dataTransfer.effectAllowed = "none";
   }, []);
 
+  const onNodeDrag = useCallback(
+    (_: unknown, node: Node) => {
+      const draggedNode = node as Node<NodeData>;
+      const draggedPiece = draggedNode.data.piece;
+
+      const getPortPosition = (node: Node<NodeData>, edge: EdgePosition) => {
+        switch (edge) {
+          case "left":
+            return {
+              x: node.position.x,
+              y: node.position.y + pieceSizeRef.current.pieceSize / 2,
+            };
+          case "right":
+            return {
+              x: node.position.x + pieceSizeRef.current.pieceSize,
+              y: node.position.y + pieceSizeRef.current.pieceSize / 2,
+            };
+          case "top":
+            return {
+              x: node.position.x + pieceSizeRef.current.pieceSize / 2,
+              y: node.position.y,
+            };
+          case "bottom":
+            return {
+              x: node.position.x + pieceSizeRef.current.pieceSize / 2,
+              y: node.position.y + pieceSizeRef.current.pieceSize,
+            };
+        }
+      };
+
+      const getDistance = (
+        p1: { x: number; y: number },
+        p2: { x: number; y: number }
+      ) => {
+        return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+      };
+
+      let closestConnection: ClosestConnection | null = null;
+      let minDistance = connectionRadius / 2;
+
+      nodes.forEach((targetNode) => {
+        if (targetNode.id === node.id) return;
+
+        const targetPiece = targetNode.data.piece;
+
+        Object.entries(draggedPiece.edge).forEach(
+          ([draggedEdge, draggedValue]) => {
+            const draggedEdgePosition = draggedEdge as EdgePosition;
+            Object.entries(targetPiece.edge).forEach(
+              ([targetEdge, targetValue]) => {
+                const targetEdgePosition = targetEdge as EdgePosition;
+                if (
+                  isOppositePosition(draggedEdgePosition, targetEdgePosition) &&
+                  ((draggedValue === "tab" && targetValue === "blank") ||
+                    (draggedValue === "blank" && targetValue === "tab"))
+                ) {
+                  const draggedPort = getPortPosition(
+                    draggedNode,
+                    draggedEdgePosition
+                  );
+                  const targetPort = getPortPosition(
+                    targetNode,
+                    targetEdgePosition
+                  );
+                  const distance = getDistance(draggedPort, targetPort);
+
+                  if (distance < minDistance) {
+                    minDistance = distance;
+                    closestConnection = {
+                      draggedNode,
+                      targetNode,
+                      draggedEdgePosition,
+                      targetEdgePosition,
+                    };
+                  }
+                }
+              }
+            );
+          }
+        );
+      });
+
+      if (closestConnection) {
+        const {
+          draggedNode,
+          targetNode,
+          draggedEdgePosition,
+          targetEdgePosition,
+        } = closestConnection as ClosestConnection;
+
+        let snapX = targetNode.position.x;
+        let snapY = targetNode.position.y;
+
+        switch (draggedEdgePosition) {
+          case "left":
+            snapX = targetNode.position.x + pieceSizeRef.current.pieceSize;
+            snapY = targetNode.position.y;
+            break;
+          case "right":
+            snapX = targetNode.position.x - pieceSizeRef.current.pieceSize;
+            snapY = targetNode.position.y;
+            break;
+          case "top":
+            snapX = targetNode.position.x;
+            snapY = targetNode.position.y + pieceSizeRef.current.pieceSize;
+            break;
+          case "bottom":
+            snapX = targetNode.position.x;
+            snapY = targetNode.position.y - pieceSizeRef.current.pieceSize;
+            break;
+        }
+
+        setNodes((nds) =>
+          nds.map((n) => {
+            if (n.id === draggedNode.id) {
+              n.position = { x: snapX, y: snapY };
+              onConnect({
+                source: draggedNode.id,
+                target: targetNode.id,
+                sourcePort: `${draggedEdgePosition}-${draggedNode.data.piece.edge[draggedEdgePosition]}`,
+                targetPort: `${targetEdgePosition}-${targetNode.data.piece.edge[targetEdgePosition]}`,
+              });
+            }
+            return n;
+          })
+        );
+      }
+    },
+    [nodes, onConnect]
+  );
+
   return (
     <div className="dnd-container">
       <ReactDiagram
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
-        connectionRadius={30}
+        connectionRadius={connectionRadius}
         minZoom={1}
         maxZoom={2}
         onNodesChange={onNodesChange}
@@ -277,6 +404,7 @@ function App() {
         onEdgeUpdateEnd={onEdgeUpdateEnd}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onNodeDrag={onNodeDrag}
       />
 
       <PuzzleSidebar />

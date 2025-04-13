@@ -1,3 +1,5 @@
+import { EdgePosition } from "./type";
+
 type ResizeOptions = {
   maxSize: number;
   outputType?: "blob" | "dataUrl";
@@ -83,3 +85,17 @@ export function resize(imageSrc: string, options: ResizeOptions) {
     },
   };
 }
+
+export const isOppositePosition = (
+  draggedEdgePosition: EdgePosition,
+  targetEdgePosition: EdgePosition
+): boolean => {
+  const opposites: Record<EdgePosition, EdgePosition> = {
+    left: "right",
+    right: "left",
+    top: "bottom",
+    bottom: "top",
+  };
+
+  return opposites[draggedEdgePosition] === targetEdgePosition;
+};
