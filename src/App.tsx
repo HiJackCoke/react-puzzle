@@ -253,7 +253,7 @@ function App() {
     event.dataTransfer.effectAllowed = "none";
   }, []);
 
-  const onNodeDrag = useCallback(
+  const onNodeDragEnd = useCallback(
     (_: unknown, node: Node) => {
       const closestConnection = findClosestConnection(
         node as Node<NodeData>,
@@ -312,7 +312,7 @@ function App() {
         onEdgeUpdateEnd={onEdgeUpdateEnd}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
-        onNodeDrag={onNodeDrag}
+        onNodeDragEnd={onNodeDragEnd}
       />
 
       <PuzzleSidebar />
