@@ -255,6 +255,13 @@ function App() {
 
   const onNodeDragEnd = useCallback(
     (_: unknown, node: Node) => {
+      setNodes((nds) =>
+        nds.map((n) => ({
+          ...n,
+          data: { ...n.data, highlightedPort: undefined },
+        }))
+      );
+
       const closestConnection = findClosestConnection(
         node as Node<NodeData>,
         nodes,
@@ -295,6 +302,64 @@ function App() {
     [nodes, onConnect]
   );
 
+  const onNodeDrag = useCallback(
+    (_: unknown, node: Node) => {
+      const closestConnection = findClosestConnection(
+        node as Node<NodeData>,
+        nodes,
+        pieceSizeRef.current.pieceSize,
+        connectionRadius
+      );
+
+      setNodes((nds) =>
+        nds.map((n) => ({
+          ...n,
+          data: { ...n.data, highlightedPort: undefined },
+        }))
+      );
+
+      if (!closestConnection) return;
+
+      const {
+        draggedNode,
+        targetNode,
+        draggedEdgePosition,
+        targetEdgePosition,
+      } = closestConnection;
+
+      setNodes((nds) =>
+        nds.map((n) => {
+          if (n.id === draggedNode.id) {
+            return {
+              ...n,
+              data: {
+                ...n.data,
+                highlightedPort: {
+                  position: draggedEdgePosition,
+                  isSource: true,
+                },
+              },
+            };
+          }
+          if (n.id === targetNode.id) {
+            return {
+              ...n,
+              data: {
+                ...n.data,
+                highlightedPort: {
+                  position: targetEdgePosition,
+                  isSource: false,
+                },
+              },
+            };
+          }
+          return n;
+        })
+      );
+    },
+    [nodes]
+  );
+
   return (
     <div className="dnd-container">
       <ReactDiagram
@@ -313,6 +378,7 @@ function App() {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeDragEnd={onNodeDragEnd}
+        onNodeDrag={onNodeDrag}
       />
 
       <PuzzleSidebar />

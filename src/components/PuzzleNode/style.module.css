@@ -8,12 +8,12 @@
 } */
 
 .container {
-   width: 100%;
+  width: 100%;
 }
 
 .container .wrapper {
-   width: 100%;
-   display: flex;
+  width: 100%;
+  display: flex;
 }
 
 /* .container :global(.react-diagram__port-left) {
@@ -25,27 +25,64 @@
 } */
 
 .container .blank-left > div {
-   left: var(--position);
+  left: var(--position);
 }
+
 .container .blank-right > div {
-   right: var(--position);
+  right: var(--position);
 }
+
 .container .blank-top > div {
-   top: var(--position);
+  top: var(--position);
 }
+
 .container .blank-bottom > div {
-   bottom: var(--position);
+  bottom: var(--position);
 }
 
 .container .tab-left > div {
-   left: 0;
+  left: 0;
 }
+
 .container .tab-right > div {
-   right: 0;
+  right: 0;
 }
+
 .container .tab-top > div {
-   top: 0;
+  top: 0;
 }
+
 .container .tab-bottom > div {
-   bottom: 0;
+  bottom: 0;
+}
+
+.highlighted > div::after {
+  content: "";
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: var(--highlight-color);
+  opacity: 0.3;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  animation: pulse 1.5s infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+
+@keyframes pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.5);
+    opacity: 0.2;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.3;
+  }
 }
