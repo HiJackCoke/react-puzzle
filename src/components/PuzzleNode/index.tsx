@@ -7,13 +7,15 @@ import { CSSProperties } from "react";
 import "./style.css";
 import { EdgePosition } from "../PuzzleGenerator/type";
 
+export type HighlightedPort = {
+  position: EdgePosition;
+  isSource: boolean;
+};
+
 export type NodeData = {
   piece: PuzzlePiece;
   size: PieceSize;
-  highlightedPort?: {
-    position: EdgePosition;
-    isSource: boolean;
-  };
+  highlightedPorts?: HighlightedPort[];
 };
 
 const capitalizeFirstLetter = (
@@ -23,7 +25,7 @@ const capitalizeFirstLetter = (
 };
 
 function PuzzleNode({ data, selected }: NodeProps<NodeData>) {
-  const { piece, highlightedPort } = data;
+  const { piece, highlightedPorts } = data;
 
   const { id, dataUrl, edge } = piece;
 
@@ -45,7 +47,10 @@ function PuzzleNode({ data, selected }: NodeProps<NodeData>) {
       {edgeMap.map(([key, value]) => {
         if (value === "flat") return null;
 
-        const isHighlighted = highlightedPort?.position === key;
+        const highlightInfo = highlightedPorts?.find(
+          (port) => port.position === key
+        );
+        const isHighlighted = Boolean(highlightInfo);
         const highlightClass = isHighlighted ? styles.highlighted : "";
 
         return (
@@ -55,7 +60,7 @@ function PuzzleNode({ data, selected }: NodeProps<NodeData>) {
             style={
               {
                 "--position": `${data.size.tabSize + data.size.tabSize / 2}px`,
-                "--highlight-color": highlightedPort?.isSource
+                "--highlight-color": highlightInfo?.isSource
                   ? "#4CAF50"
                   : "#2196F3",
               } as CSSProperties

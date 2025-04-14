@@ -9,7 +9,7 @@ import ReactDiagram, {
   useNodesState,
 } from "react-cosmos-diagram";
 
-import PuzzleNode, { NodeData } from "./components/PuzzleNode";
+import PuzzleNode, { NodeData, HighlightedPort } from "./components/PuzzleNode";
 import { useDragContext } from "./contexts/DragContext";
 import { PieceSize } from "./components/PuzzleGenerator";
 import PuzzleSidebar from "./components/PuzzleSidebar";
@@ -18,7 +18,7 @@ import "react-cosmos-diagram/dist/style.css";
 import { EdgePosition } from "./components/PuzzleGenerator/type";
 import { isOppositePosition } from "./components/PuzzleGenerator/utils";
 import {
-  findClosestConnection,
+  findClosestConnections,
   getSnapPosition,
 } from "./components/PuzzleNode/utils";
 
@@ -76,97 +76,44 @@ function App() {
     if (!isOppositePosition(draggedEdgePosition, targetEdgePosition)) return;
 
     if (target && source) {
-      const draggedNodes = nodeMap.current.get(source) ?? [];
-      const targetNodes = nodeMap.current.get(target) ?? [];
-
-      const targets = new Set([...draggedNodes, ...targetNodes, target]);
-      const sources = new Set([...draggedNodes, ...targetNodes, source]);
-
-      nodeMap.current.set(source, Array.from(targets));
-      nodeMap.current.set(target, Array.from(sources));
+      nodeMap.current.set(source, [target]);
+      nodeMap.current.set(target, [source]);
     }
 
     setNodes((nodes) => {
-      const connectedNodes = target
-        ? nodeMap.current
-            .get(target)
-            ?.flatMap((node) => nodeMap.current.get(node) ?? [])
-        : [];
-
-      const filteredConnectedNodes = [...new Set(connectedNodes)];
-
       const draggedNode = nodes.find((node) => node.id === source);
+      const targetNode = nodes.find((node) => node.id === target);
 
-      const draggedNodeX = draggedNode?.position.x || 0;
-      const draggedNodeY = draggedNode?.position.y || 0;
-
-      const childNodes = nodes.filter((node) =>
-        filteredConnectedNodes?.includes(node.id)
-      );
+      if (!draggedNode || !targetNode) return nodes;
 
       let offsetX = 0;
       let offsetY = 0;
 
-      const unCaughtNodes = nodes.filter(
-        (node) =>
-          !childNodes.some(
-            (childNodes) =>
-              childNodes.id === node.id && childNodes.id !== source
-          )
-      );
+      if (targetEdgePosition === "left") {
+        offsetX = draggedNode.position.x + pieceSizeRef.current.pieceSize;
+        offsetY = draggedNode.position.y;
+      }
+
+      if (targetEdgePosition === "right") {
+        offsetX = draggedNode.position.x - pieceSizeRef.current.pieceSize;
+        offsetY = draggedNode.position.y;
+      }
+
+      if (targetEdgePosition === "top") {
+        offsetX = draggedNode.position.x;
+        offsetY = draggedNode.position.y + pieceSizeRef.current.pieceSize;
+      }
+
+      if (targetEdgePosition === "bottom") {
+        offsetX = draggedNode.position.x;
+        offsetY = draggedNode.position.y - pieceSizeRef.current.pieceSize;
+      }
 
       return nodes.map((node) => {
         if (node.id === target) {
-          if (targetEdgePosition === "left") {
-            offsetX = draggedNodeX + pieceSizeRef.current.pieceSize;
-            offsetY = draggedNodeY;
-          }
-
-          if (targetEdgePosition === "right") {
-            offsetX = draggedNodeX - pieceSizeRef.current.pieceSize;
-            offsetY = draggedNodeY;
-          }
-
-          if (targetEdgePosition === "top") {
-            offsetX = draggedNodeX;
-            offsetY = draggedNodeY + pieceSizeRef.current.pieceSize;
-          }
-
-          if (targetEdgePosition === "bottom") {
-            offsetX = draggedNodeX;
-            offsetY = draggedNodeY - pieceSizeRef.current.pieceSize;
-          }
-
-          if (childNodes.some((childNodes) => childNodes.id === source)) {
-            childNodes
-              .filter((childNodes) => childNodes.id === target)
-              .forEach((childNode) => {
-                childNode.position.x = offsetX;
-                childNode.position.y = offsetY;
-              });
-          } else {
-            childNodes
-              .filter((childNodes) => childNodes.id !== target)
-              .forEach((childNode) => {
-                childNode.position.x =
-                  offsetX + (childNode.position.x - node.position.x);
-                childNode.position.y =
-                  offsetY + (childNode.position.y - node.position.y);
-              });
-            unCaughtNodes
-              .filter((unCaughtNode) => unCaughtNode.id !== source)
-              .forEach((unCaughtNode) => {
-                unCaughtNode.position.x =
-                  offsetX + (unCaughtNode.position.x - node.position.x);
-                unCaughtNode.position.y =
-                  offsetY + (unCaughtNode.position.y - node.position.y);
-              });
-
-            node.position.x = offsetX;
-            node.position.y = offsetY;
-          }
+          node.position.x = offsetX;
+          node.position.y = offsetY;
         }
-
         return node;
       });
     });
@@ -258,18 +205,23 @@ function App() {
       setNodes((nds) =>
         nds.map((n) => ({
           ...n,
-          data: { ...n.data, highlightedPort: undefined },
+          data: { ...n.data, highlightedPorts: undefined },
         }))
       );
 
-      const closestConnection = findClosestConnection(
+      const connections = findClosestConnections(
         node as Node<NodeData>,
         nodes,
         pieceSizeRef.current.pieceSize,
         connectionRadius
       );
 
-      if (!closestConnection) return;
+      if (connections.length === 0) return;
+
+      // 가장 가까운 연결점 찾기
+      const closestConnection = connections.reduce((prev, curr) =>
+        prev.distance < curr.distance ? prev : curr
+      );
 
       const {
         draggedNode,
@@ -283,6 +235,27 @@ function App() {
         draggedEdgePosition,
         pieceSizeRef.current.pieceSize
       );
+
+      const draggedNodes = nodeMap.current.get(draggedNode.id) ?? [];
+      const targetNodes = nodeMap.current.get(targetNode.id) ?? [];
+
+      const newGroup = [
+        ...new Set([
+          ...draggedNodes,
+          ...targetNodes,
+          draggedNode.id,
+          targetNode.id,
+        ]),
+      ];
+
+      nodeMap.current.clear();
+
+      newGroup.forEach((nodeId) => {
+        nodeMap.current.set(
+          nodeId,
+          newGroup.filter((id) => id !== nodeId)
+        );
+      });
 
       setNodes((nds) =>
         nds.map((n) => {
@@ -304,58 +277,57 @@ function App() {
 
   const onNodeDrag = useCallback(
     (_: unknown, node: Node) => {
-      const closestConnection = findClosestConnection(
+      const closestConnections = findClosestConnections(
         node as Node<NodeData>,
         nodes,
         pieceSizeRef.current.pieceSize,
         connectionRadius
       );
 
+      // 모든 노드의 하이라이트 초기화
       setNodes((nds) =>
         nds.map((n) => ({
           ...n,
-          data: { ...n.data, highlightedPort: undefined },
+          data: {
+            ...n.data,
+            highlightedPorts: [],
+          },
         }))
       );
 
-      if (!closestConnection) return;
+      // 발견된 모든 연결 가능한 포트에 대해 하이라이트 정보 설정
+      if (closestConnections.length > 0) {
+        setNodes((nds) =>
+          nds.map((n) => {
+            const draggedConnections = closestConnections.filter(
+              (conn) => conn.draggedNode.id === n.id
+            );
+            const targetConnections = closestConnections.filter(
+              (conn) => conn.targetNode.id === n.id
+            );
 
-      const {
-        draggedNode,
-        targetNode,
-        draggedEdgePosition,
-        targetEdgePosition,
-      } = closestConnection;
+            const highlightedPorts: HighlightedPort[] = [
+              ...draggedConnections.map((conn) => ({
+                position: conn.draggedEdgePosition,
+                isSource: true,
+              })),
+              ...targetConnections.map((conn) => ({
+                position: conn.targetEdgePosition,
+                isSource: false,
+              })),
+            ];
 
-      setNodes((nds) =>
-        nds.map((n) => {
-          if (n.id === draggedNode.id) {
             return {
               ...n,
               data: {
                 ...n.data,
-                highlightedPort: {
-                  position: draggedEdgePosition,
-                  isSource: true,
-                },
+                highlightedPorts:
+                  highlightedPorts.length > 0 ? highlightedPorts : undefined,
               },
             };
-          }
-          if (n.id === targetNode.id) {
-            return {
-              ...n,
-              data: {
-                ...n.data,
-                highlightedPort: {
-                  position: targetEdgePosition,
-                  isSource: false,
-                },
-              },
-            };
-          }
-          return n;
-        })
-      );
+          })
+        );
+      }
     },
     [nodes]
   );

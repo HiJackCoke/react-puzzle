@@ -3,13 +3,13 @@ import { NodeData } from ".";
 import { EdgePosition } from "../PuzzleGenerator/type";
 import { isOppositePosition } from "../PuzzleGenerator/utils";
 
-interface ClosestConnection {
-    draggedNode: Node<NodeData>;
-    targetNode: Node<NodeData>;
-    draggedEdgePosition: EdgePosition;
-    targetEdgePosition: EdgePosition;
-  }
-
+export interface ClosestConnection {
+  draggedNode: Node<NodeData>;
+  targetNode: Node<NodeData>;
+  draggedEdgePosition: EdgePosition;
+  targetEdgePosition: EdgePosition;
+  distance: number;
+}
 
 const getPortPosition = (
   node: Node<NodeData>,
@@ -51,14 +51,13 @@ export const getSnapPosition = (
   return snapPositions[draggedEdgePosition];
 };
 
-export const findClosestConnection = (
+export const findClosestConnections = (
   draggedNode: Node<NodeData>,
   nodes: Node<NodeData>[],
   pieceSize: number,
   connectionRadius: number
-): ClosestConnection | null => {
-  let closestConnection: ClosestConnection | null = null;
-  let minDistance = connectionRadius / 2;
+): ClosestConnection[] => {
+  const connections: ClosestConnection[] = [];
 
   const draggedPiece = draggedNode.data.piece;
 
@@ -96,18 +95,18 @@ export const findClosestConnection = (
         );
         const distance = getDistance(draggedPort, targetPort);
 
-        if (distance < minDistance) {
-          minDistance = distance;
-          closestConnection = {
+        if (distance < connectionRadius) {
+          connections.push({
             draggedNode,
             targetNode,
             draggedEdgePosition,
             targetEdgePosition,
-          };
+            distance,
+          });
         }
       }
     }
   }
 
-  return closestConnection;
+  return connections;
 };
