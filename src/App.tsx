@@ -216,19 +216,14 @@ function App() {
         connectionRadius
       );
 
-      if (connections.length === 0) return;
-
-      // 가장 가까운 연결점 찾기
-      const closestConnection = connections.reduce((prev, curr) =>
-        prev.distance < curr.distance ? prev : curr
-      );
+      if (!connections[0]) return;
 
       const {
         draggedNode,
         targetNode,
         draggedEdgePosition,
         targetEdgePosition,
-      } = closestConnection;
+      } = connections[0];
 
       const snapPosition = getSnapPosition(
         targetNode,
@@ -294,20 +289,13 @@ function App() {
         }))
       );
 
-      const minDistance = Math.min(
-        ...connections.map((connection) => connection.distance)
-      );
-      const closestConnections = connections.filter(
-        (connection) => connection.distance === minDistance
-      );
-
-      if (closestConnections.length > 0) {
+      if (connections.length > 0) {
         setNodes((nds) =>
           nds.map((n) => {
-            const draggedConnections = closestConnections.filter(
+            const draggedConnections = connections.filter(
               (connection) => connection.draggedNode.id === n.id
             );
-            const targetConnections = closestConnections.filter(
+            const targetConnections = connections.filter(
               (connection) => connection.targetNode.id === n.id
             );
 

@@ -108,5 +108,12 @@ export const findClosestConnections = (
     }
   }
 
-  return connections;
+        const minDistance = Math.min(
+        ...connections.map((connection) => connection.distance)
+      );
+      const closestConnections = connections.filter(
+        (connection) => connection.distance === minDistance
+      );
+
+  return closestConnections;
 };
