@@ -277,14 +277,13 @@ function App() {
 
   const onNodeDrag = useCallback(
     (_: unknown, node: Node) => {
-      const closestConnections = findClosestConnections(
+      const connections = findClosestConnections(
         node as Node<NodeData>,
         nodes,
         pieceSizeRef.current.pieceSize,
         connectionRadius
       );
 
-      // 모든 노드의 하이라이트 초기화
       setNodes((nds) =>
         nds.map((n) => ({
           ...n,
@@ -295,24 +294,30 @@ function App() {
         }))
       );
 
-      // 발견된 모든 연결 가능한 포트에 대해 하이라이트 정보 설정
+      const minDistance = Math.min(
+        ...connections.map((connection) => connection.distance)
+      );
+      const closestConnections = connections.filter(
+        (connection) => connection.distance === minDistance
+      );
+
       if (closestConnections.length > 0) {
         setNodes((nds) =>
           nds.map((n) => {
             const draggedConnections = closestConnections.filter(
-              (conn) => conn.draggedNode.id === n.id
+              (connection) => connection.draggedNode.id === n.id
             );
             const targetConnections = closestConnections.filter(
-              (conn) => conn.targetNode.id === n.id
+              (connection) => connection.targetNode.id === n.id
             );
 
             const highlightedPorts: HighlightedPort[] = [
-              ...draggedConnections.map((conn) => ({
-                position: conn.draggedEdgePosition,
+              ...draggedConnections.map((connection) => ({
+                position: connection.draggedEdgePosition,
                 isSource: true,
               })),
-              ...targetConnections.map((conn) => ({
-                position: conn.targetEdgePosition,
+              ...targetConnections.map((connection) => ({
+                position: connection.targetEdgePosition,
                 isSource: false,
               })),
             ];
