@@ -1,5 +1,6 @@
 import React, { useRef, useState } from "react";
 import { resize } from "./utils";
+import styles from "./style.module.css";
 
 export type PuzzleEdge = "flat" | "tab" | "blank";
 export type PuzzlePiece = {
@@ -34,13 +35,14 @@ const PIECE_SIZE = 500;
 
 const PuzzleGenerator = ({ onImageUpdate }: Props) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  // const [pieces, setPieces] = useState<PuzzlePiece[]>([]);
   const [pieceCount, setPieceCount] = useState(PIECE_COUNT);
+  const [fileName, setFileName] = useState<string>("");
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setFileName(file.name);
     const img = new Image();
     const blob = URL.createObjectURL(file);
     img.src = URL.createObjectURL(file);
@@ -53,6 +55,13 @@ const PuzzleGenerator = ({ onImageUpdate }: Props) => {
         resized instanceof Blob ? URL.createObjectURL(resized) : resized;
 
       img.onload = () => splitImage(img);
+    });
+  };
+
+  const adjustPieceCount = (increment: boolean) => {
+    setPieceCount((prev) => {
+      const newCount = increment ? prev + 2 : prev - 2;
+      return Math.min(Math.max(4, newCount), 100); // 4에서 100 사이로 제한
     });
   };
 
@@ -126,7 +135,6 @@ const PuzzleGenerator = ({ onImageUpdate }: Props) => {
       }
     }
 
-    // setPieces(shuffleArray(newPieces));
     onImageUpdate(shuffleArray(newPieces), {
       totalSize: pieceSize + tabSize * 2,
       pieceSize,
@@ -250,13 +258,32 @@ const PuzzleGenerator = ({ onImageUpdate }: Props) => {
   };
 
   return (
-    <div style={{ padding: "1rem" }}>
-      <input type="file" accept="image/*" onChange={handleImageUpload} />
-      <input
-        type="number"
-        value={pieceCount}
-        onChange={({ target }) => setPieceCount(Number(target.value))}
-      />
+    <div className={styles.container}>
+      <div className={styles["upload-button"]}>
+        <input type="file" accept="image/*" onChange={handleImageUpload} />
+        {fileName || "이미지 파일을 선택하세요"}
+      </div>
+
+      <div className={styles["piece-count-container"]}>
+        <div className={styles["piece-count-label"]}>퍼즐 조각 수</div>
+        <div className={styles["piece-count-controls"]}>
+          <button
+            className={styles["count-button"]}
+            onClick={() => adjustPieceCount(false)}
+            disabled={pieceCount <= 4}
+          >
+            -
+          </button>
+          <div className={styles["count-display"]}>{pieceCount}</div>
+          <button
+            className={styles["count-button"]}
+            onClick={() => adjustPieceCount(true)}
+            disabled={pieceCount >= 100}
+          >
+            +
+          </button>
+        </div>
+      </div>
 
       <canvas ref={canvasRef} style={{ display: "none" }} />
     </div>
