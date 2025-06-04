@@ -35,10 +35,7 @@ function PuzzleNode({ data, selected }: NodeProps<NodeData>) {
   ][];
 
   return (
-    <div
-      className={`${styles.container} ${selected ? "selected" : ""}`}
-      onDragStart={(e) => e.preventDefault()}
-    >
+    <div className={`${styles.container} ${selected ? "selected" : ""}`}>
       <div className={styles.wrapper}>
         <img src={dataUrl} alt={`piece-${id}`} />
         {/* <div className={styles.id}>{id}</div> */}
