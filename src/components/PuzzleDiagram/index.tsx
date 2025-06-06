@@ -1,5 +1,4 @@
-import { useCallback, useRef } from "react";
-import { CSS } from "@dnd-kit/utilities";
+import { MouseEventHandler, useCallback, useRef } from "react";
 
 import ReactDiagram, {
   Connection,
@@ -8,18 +7,18 @@ import ReactDiagram, {
   updateEdge,
   useEdgesState,
   useNodesState,
+  XYPosition,
 } from "react-cosmos-diagram";
 
 import PuzzleNode, { NodeData, HighlightedPort } from "../PuzzleNode";
 
-import { PieceSize } from "../PuzzleGenerator";
+import { PieceSize, PuzzlePiece } from "../PuzzleGenerator";
 
 import { EdgePosition } from "../PuzzleGenerator/type";
 import { isOppositePosition } from "../PuzzleGenerator/utils";
 import { findClosestConnections, getSnapPosition } from "../PuzzleNode/utils";
 
 import "react-cosmos-diagram/dist/style.css";
-import { SortableContext, useSortable } from "@dnd-kit/sortable";
 
 const connectionRadius = 30;
 
@@ -27,31 +26,44 @@ const nodeTypes = {
   puzzle: PuzzleNode,
 };
 
-// const getId = (pieceId: number) => `puzzle-node-${pieceId}`;
+const getId = (pieceId: number) => `puzzle-node-${pieceId}`;
 
-// const getTranslateValues = (transformString: string) => {
-//   const translateRegex = /translate\(\s*([^\s,]+)px\s*,\s*([^\s,]+)px\s*\)/;
-//   const scaleRegex = /scale\(\s*([^\s,]+)\s*(?:,\s*([^\s,]+))?\s*\)/;
+const getTranslateValues = (transformString: string) => {
+  const translateRegex = /translate\(\s*([^\s,]+)px\s*,\s*([^\s,]+)px\s*\)/;
+  const scaleRegex = /scale\(\s*([^\s,]+)\s*(?:,\s*([^\s,]+))?\s*\)/;
 
-//   const matches = transformString.match(translateRegex);
-//   const scaleMatches = transformString.match(scaleRegex);
+  const matches = transformString.match(translateRegex);
+  const scaleMatches = transformString.match(scaleRegex);
 
-//   let x = 0,
-//     y = 0,
-//     scale = 1;
+  let x = 0,
+    y = 0,
+    scale = 1;
 
-//   if (matches) {
-//     x = parseFloat(matches[1]);
-//     y = parseFloat(matches[2]);
-//   }
+  if (matches) {
+    x = parseFloat(matches[1]);
+    y = parseFloat(matches[2]);
+  }
 
-//   if (scaleMatches) {
-//     scale = parseFloat(scaleMatches[1]);
-//   }
-//   return { x, y, scale };
-// };
+  if (scaleMatches) {
+    scale = parseFloat(scaleMatches[1]);
+  }
+  return { x, y, scale };
+};
 
-function PuzzleDiagram() {
+interface Props {
+  puzzleSizes?: PieceSize | null;
+  droppedPuzzle?: PuzzlePiece | null;
+  distance?: XYPosition | null;
+
+  onMouseUp: (id: number) => void;
+}
+const PuzzleDiagram = ({
+  puzzleSizes,
+  droppedPuzzle,
+  distance,
+  onMouseUp,
+}: Props) => {
+  const ref = useRef<HTMLDivElement>(null);
   const edgeUpdateSuccessful = useRef(true);
   const nodeMap = useRef(new Map<string, string[]>([]));
 
@@ -63,6 +75,35 @@ function PuzzleDiagram() {
 
   const [nodes, setNodes, onNodesChange] = useNodesState<NodeData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+
+  const handleMouseUp: MouseEventHandler<HTMLDivElement> = (event) => {
+    if (!droppedPuzzle) return;
+    onMouseUp(droppedPuzzle?.id);
+
+    if (!puzzleSizes || !distance) return;
+
+    const viewport = (event.target as HTMLDivElement)
+      .firstChild as HTMLDivElement;
+
+    const translate = getTranslateValues(viewport?.style.transform);
+
+    const position = {
+      x: (event.clientX - distance.x - translate.x) / translate.scale,
+      y: (event.clientY - distance.y - translate.y) / translate.scale,
+    };
+
+    const newNode = {
+      id: getId(droppedPuzzle.id),
+      type: "puzzle",
+      position,
+      data: {
+        piece: droppedPuzzle,
+        size: puzzleSizes,
+      },
+    };
+
+    setNodes((nds) => nds.concat(newNode));
+  };
 
   const onConnect = useCallback((params: Connection) => {
     const { source, target, sourcePort, targetPort } = params;
@@ -138,55 +179,55 @@ function PuzzleDiagram() {
   }, []);
 
   // const onDrop = useCallback((event: DragEvent<HTMLDivElement>) => {
-  //   event.preventDefault();
+  // event.preventDefault();
 
-  //   if (!dragCtx) return;
-  //   const { draggedElementRef } = dragCtx;
+  // if (!dragCtx) return;
+  // const { draggedElementRef } = dragCtx;
 
-  //   const node = draggedElementRef.current;
-  //   if (!node) return;
-  //   //   node.remove();
-  //   node.style.visibility = "hidden";
+  // const node = draggedElementRef.current;
+  // if (!node) return;
+  // //   node.remove();
+  // node.style.visibility = "hidden";
 
-  //   const type = event.dataTransfer.getData("application/react-cosmos-diagram");
+  // const type = event.dataTransfer.getData("application/react-cosmos-diagram");
 
-  //   const distance = JSON.parse(event.dataTransfer.getData("application/node"));
+  // const distance = JSON.parse(event.dataTransfer.getData("application/node"));
 
-  //   const piece = JSON.parse(event.dataTransfer.getData("application/piece"));
+  // const piece = JSON.parse(event.dataTransfer.getData("application/piece"));
 
-  //   const pieceSize = JSON.parse(
-  //     event.dataTransfer.getData("application/pieceSize")
-  //   );
+  // const pieceSize = JSON.parse(
+  //   event.dataTransfer.getData("application/pieceSize")
+  // );
 
-  //   if (typeof type === "undefined" || !type) {
-  //     return;
-  //   }
+  // if (typeof type === "undefined" || !type) {
+  //   return;
+  // }
 
-  //   const container = event.target as HTMLDivElement;
-  //   const viewport = container.querySelector(
-  //     ".react-diagram__viewport"
-  //   ) as HTMLDivElement;
+  // const container = event.target as HTMLDivElement;
+  // const viewport = container.querySelector(
+  //   ".react-diagram__viewport"
+  // ) as HTMLDivElement;
 
-  //   const translate = getTranslateValues(viewport?.style.transform);
+  // const translate = getTranslateValues(viewport?.style.transform);
 
-  //   const position = {
-  //     x: (event.clientX - distance.x - translate.x) / translate.scale,
-  //     y: (event.clientY - distance.y - translate.y) / translate.scale,
-  //   };
+  // const position = {
+  //   x: (event.clientX - distance.x - translate.x) / translate.scale,
+  //   y: (event.clientY - distance.y - translate.y) / translate.scale,
+  // };
 
-  //   const newNode = {
-  //     id: getId(piece.id),
-  //     type,
-  //     position,
-  //     data: {
-  //       piece,
-  //       size: pieceSize,
-  //     },
-  //   };
+  // const newNode = {
+  //   id: getId(piece.id),
+  //   type,
+  //   position,
+  //   data: {
+  //     piece,
+  //     size: pieceSize,
+  //   },
+  // };
 
-  //   pieceSizeRef.current = pieceSize;
-  //   setNodes((nds) => nds.concat(newNode));
-  //   event.dataTransfer.effectAllowed = "none";
+  // pieceSizeRef.current = pieceSize;
+  // setNodes((nds) => nds.concat(newNode));
+  // event.dataTransfer.effectAllowed = "none";
   // }, []);
 
   const onNodeDragEnd = useCallback(
@@ -314,40 +355,26 @@ function PuzzleDiagram() {
     [nodes]
   );
 
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id: "diagram1" });
-
-  const style = {
-    width: "100%",
-    height: "100%",
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
   return (
-    <SortableContext id="diagram" items={[]}>
-      <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-        <ReactDiagram
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          connectionRadius={connectionRadius}
-          minZoom={1}
-          maxZoom={2}
-          onNodesChange={onNodesChange}
-          // onDrop={onDrop}
-          // onDragOver={onDragOver}
-          onEdgeUpdate={onEdgeUpdate}
-          onEdgeUpdateStart={onEdgeUpdateStart}
-          onEdgeUpdateEnd={onEdgeUpdateEnd}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onNodeDragEnd={onNodeDragEnd}
-          onNodeDrag={onNodeDrag}
-        />
-      </div>
-    </SortableContext>
+    <ReactDiagram
+      ref={ref}
+      nodes={nodes}
+      edges={edges}
+      nodeTypes={nodeTypes}
+      connectionRadius={connectionRadius}
+      minZoom={1}
+      maxZoom={2}
+      onMouseUp={handleMouseUp}
+      onNodesChange={onNodesChange}
+      onEdgeUpdate={onEdgeUpdate}
+      onEdgeUpdateStart={onEdgeUpdateStart}
+      onEdgeUpdateEnd={onEdgeUpdateEnd}
+      onEdgesChange={onEdgesChange}
+      onConnect={onConnect}
+      onNodeDragEnd={onNodeDragEnd}
+      onNodeDrag={onNodeDrag}
+    />
   );
-}
+};
 
 export default PuzzleDiagram;

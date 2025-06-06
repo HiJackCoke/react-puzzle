@@ -12,11 +12,13 @@ import { rectSortingStrategy, SortableContext } from "@dnd-kit/sortable";
 import { DragOverlay } from "@dnd-kit/core";
 
 interface Props {
-  activeId?: number;
+  activeId?: number | null;
+  pieces: PuzzlePiece[];
+  onImageChange?: (pieces: PuzzlePiece[], size: PieceSize) => void;
 }
 
-function PuzzleSidebar({ activeId }: Props) {
-  const [pieces, setPieces] = useState<PuzzlePiece[]>([]);
+function PuzzleSidebar({ activeId, pieces, onImageChange }: Props) {
+  // const [pieces, setPieces] = useState<PuzzlePiece[]>([]);
   const [sizes, setSizes] = useState<PieceSize>({
     totalSize: 0,
     pieceSize: 0,
@@ -24,7 +26,8 @@ function PuzzleSidebar({ activeId }: Props) {
   });
 
   const handlePuzzleUpdate: OnImageUpdate = (pieces, size) => {
-    setPieces(pieces);
+    onImageChange?.(pieces, size);
+    // setPieces(pieces);
     setSizes(size);
   };
 
@@ -45,6 +48,7 @@ function PuzzleSidebar({ activeId }: Props) {
               <PuzzleNodeView
                 key={piece.id}
                 id={piece.id}
+                isDragging={activeId === piece.id}
                 sizes={sizes}
                 piece={piece}
               />
@@ -52,11 +56,12 @@ function PuzzleSidebar({ activeId }: Props) {
           </div>
         </aside>
       </SortableContext>
-      <DragOverlay>
-        {activeId && activePiece ? (
+
+      {activeId && activePiece ? (
+        <DragOverlay dropAnimation={{ duration: 0 }}>
           <PuzzleNodeView id={activeId} sizes={sizes} piece={activePiece} />
-        ) : null}
-      </DragOverlay>
+        </DragOverlay>
+      ) : null}
     </>
   );
 }

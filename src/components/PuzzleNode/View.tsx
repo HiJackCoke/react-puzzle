@@ -7,15 +7,17 @@ interface Props {
   id: number;
   piece: PuzzlePiece;
   sizes: PieceSize;
+  isDragging?: boolean;
 }
 
-const PuzzleNodeView = ({ id, piece, sizes }: Props) => {
-  const { attributes, listeners, setNodeRef, transform, transition } =
+const PuzzleNodeView = ({ id, piece, sizes, isDragging }: Props) => {
+  const { attributes, listeners, transform, transition, setNodeRef } =
     useSortable({ id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    opacity: isDragging ? 0.3 : 1,
   };
 
   return (

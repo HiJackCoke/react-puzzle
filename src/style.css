@@ -2,6 +2,14 @@ input {
   width: 80%;
 }
 
+.react-diagram {
+  z-index: 9999;
+
+  @media screen and (max-width: 768px) {
+    height: 70%;
+  }
+}
+
 .dnd-container {
   display: flex;
 
