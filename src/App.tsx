@@ -7,13 +7,13 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  // TouchSensor,
+  TouchSensor,
   DragStartEvent,
   DragEndEvent,
 } from "@dnd-kit/core";
 import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import PuzzleDiagram from "./components/PuzzleDiagram";
-import { MouseEventHandler, useRef, useState } from "react";
+import { MouseEventHandler, TouchEventHandler, useRef, useState } from "react";
 import { PieceSize, PuzzlePiece } from "./components/PuzzleGenerator";
 import { Node, XYPosition } from "react-cosmos-diagram";
 import { NodeData } from "./components/PuzzleNode";
@@ -42,6 +42,15 @@ const getTranslateValues = (transformString: string) => {
   return { x, y, scale };
 };
 
+const hasMouseSupport = (): boolean => {
+  const hasPointerFine = window.matchMedia("(pointer: fine)").matches;
+
+  const hasTouchSupport =
+    "ontouchstart" in window || navigator.maxTouchPoints > 0;
+
+  return hasPointerFine && !hasTouchSupport;
+};
+
 function App() {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -55,8 +64,7 @@ function App() {
   const [puzzleNode, setPuzzleNode] = useState<Node<NodeData> | null>(null);
 
   const sensors = useSensors(
-    // useSensor(TouchSensor),
-    useSensor(PointerSensor),
+    useSensor(hasMouseSupport() ? PointerSensor : TouchSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -75,20 +83,27 @@ function App() {
   }
 
   const handleDragEnd = (event: DragEndEvent) => {
-    // setActiveId(null);
-
     const { active, over, activatorEvent } = event;
     if (!over) return;
 
     const { id: activeId } = active;
     const { id: overId } = over;
 
-    const pointerEvent = activatorEvent as PointerEvent;
+    if (hasMouseSupport()) {
+      const pointerEvent = activatorEvent as PointerEvent;
 
-    setDistance({
-      x: pointerEvent.layerX,
-      y: pointerEvent.layerY,
-    });
+      setDistance({
+        x: pointerEvent.layerX,
+        y: pointerEvent.layerY,
+      });
+    } else {
+      const pointerEvent = activatorEvent as TouchEvent;
+
+      setDistance({
+        x: pointerEvent.touches[0].radiusX,
+        y: pointerEvent.touches[0].radiusY,
+      });
+    }
 
     const droppedPuzzle = pieces.find((piece) => piece.id === activeId);
     if (droppedPuzzle) setDroppedPuzzle(droppedPuzzle);
@@ -103,7 +118,7 @@ function App() {
     });
   };
 
-  const handleMouseUp: MouseEventHandler<HTMLDivElement> = (e) => {
+  const handleNodeUpdate = ({ x, y }: XYPosition) => {
     if (!droppedPuzzle) return;
     if (!distance) return;
     if (!sizes) return;
@@ -114,8 +129,8 @@ function App() {
 
     const translate = getTranslateValues(viewport?.style.transform);
     const position = {
-      x: (e.clientX - distance.x - translate.x) / translate.scale,
-      y: (e.clientY - distance.y - translate.y) / translate.scale,
+      x: (x - distance.x - translate.x) / translate.scale,
+      y: (y - distance.y - translate.y) / translate.scale,
     };
 
     const newNode = {
@@ -130,6 +145,16 @@ function App() {
 
     setPuzzleNode(newNode);
   };
+  const handleMouseUp: MouseEventHandler<HTMLDivElement> = (e) => {
+    handleNodeUpdate({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleTouchEnd: TouchEventHandler<HTMLDivElement> = (e) => {
+    handleNodeUpdate({
+      x: e.changedTouches[0].clientX,
+      y: e.changedTouches[0].clientY,
+    });
+  };
 
   const handleUpdateSuccess = () => {
     setPieces((pieces) => pieces.filter((piece) => piece.id !== activeId));
@@ -141,7 +166,12 @@ function App() {
   };
 
   return (
-    <div ref={ref} className="dnd-container" onMouseUp={handleMouseUp}>
+    <div
+      ref={ref}
+      className="dnd-container"
+      onMouseUp={handleMouseUp}
+      onTouchEnd={handleTouchEnd}
+    >
       <PuzzleDiagram
         puzzleNode={puzzleNode}
         onUpdateSuccess={handleUpdateSuccess}
