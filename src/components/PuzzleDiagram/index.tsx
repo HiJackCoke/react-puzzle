@@ -1,4 +1,4 @@
-import { MouseEventHandler, useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 import ReactDiagram, {
   Connection,
@@ -7,12 +7,11 @@ import ReactDiagram, {
   updateEdge,
   useEdgesState,
   useNodesState,
-  XYPosition,
 } from "react-cosmos-diagram";
 
 import PuzzleNode, { NodeData, HighlightedPort } from "../PuzzleNode";
 
-import { PieceSize, PuzzlePiece } from "../PuzzleGenerator";
+import { PieceSize } from "../PuzzleGenerator";
 
 import { EdgePosition } from "../PuzzleGenerator/type";
 import { isOppositePosition } from "../PuzzleGenerator/utils";
@@ -26,42 +25,15 @@ const nodeTypes = {
   puzzle: PuzzleNode,
 };
 
-const getId = (pieceId: number) => `puzzle-node-${pieceId}`;
-
-const getTranslateValues = (transformString: string) => {
-  const translateRegex = /translate\(\s*([^\s,]+)px\s*,\s*([^\s,]+)px\s*\)/;
-  const scaleRegex = /scale\(\s*([^\s,]+)\s*(?:,\s*([^\s,]+))?\s*\)/;
-
-  const matches = transformString.match(translateRegex);
-  const scaleMatches = transformString.match(scaleRegex);
-
-  let x = 0,
-    y = 0,
-    scale = 1;
-
-  if (matches) {
-    x = parseFloat(matches[1]);
-    y = parseFloat(matches[2]);
-  }
-
-  if (scaleMatches) {
-    scale = parseFloat(scaleMatches[1]);
-  }
-  return { x, y, scale };
-};
-
 interface Props {
-  puzzleSizes?: PieceSize | null;
-  droppedPuzzle?: PuzzlePiece | null;
-  distance?: XYPosition | null;
+  puzzleNode?: Node<NodeData> | null;
 
-  onMouseUp: (id: number) => void;
+  onUpdateSuccess: () => void;
 }
 const PuzzleDiagram = ({
-  puzzleSizes,
-  droppedPuzzle,
-  distance,
-  onMouseUp,
+  puzzleNode,
+
+  onUpdateSuccess,
 }: Props) => {
   const ref = useRef<HTMLDivElement>(null);
   const edgeUpdateSuccessful = useRef(true);
@@ -75,35 +47,6 @@ const PuzzleDiagram = ({
 
   const [nodes, setNodes, onNodesChange] = useNodesState<NodeData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-
-  const handleMouseUp: MouseEventHandler<HTMLDivElement> = (event) => {
-    if (!droppedPuzzle) return;
-    onMouseUp(droppedPuzzle?.id);
-
-    if (!puzzleSizes || !distance) return;
-
-    const viewport = (event.target as HTMLDivElement)
-      .firstChild as HTMLDivElement;
-
-    const translate = getTranslateValues(viewport?.style.transform);
-
-    const position = {
-      x: (event.clientX - distance.x - translate.x) / translate.scale,
-      y: (event.clientY - distance.y - translate.y) / translate.scale,
-    };
-
-    const newNode = {
-      id: getId(droppedPuzzle.id),
-      type: "puzzle",
-      position,
-      data: {
-        piece: droppedPuzzle,
-        size: puzzleSizes,
-      },
-    };
-
-    setNodes((nds) => nds.concat(newNode));
-  };
 
   const onConnect = useCallback((params: Connection) => {
     const { source, target, sourcePort, targetPort } = params;
@@ -177,58 +120,6 @@ const PuzzleDiagram = ({
 
     edgeUpdateSuccessful.current = true;
   }, []);
-
-  // const onDrop = useCallback((event: DragEvent<HTMLDivElement>) => {
-  // event.preventDefault();
-
-  // if (!dragCtx) return;
-  // const { draggedElementRef } = dragCtx;
-
-  // const node = draggedElementRef.current;
-  // if (!node) return;
-  // //   node.remove();
-  // node.style.visibility = "hidden";
-
-  // const type = event.dataTransfer.getData("application/react-cosmos-diagram");
-
-  // const distance = JSON.parse(event.dataTransfer.getData("application/node"));
-
-  // const piece = JSON.parse(event.dataTransfer.getData("application/piece"));
-
-  // const pieceSize = JSON.parse(
-  //   event.dataTransfer.getData("application/pieceSize")
-  // );
-
-  // if (typeof type === "undefined" || !type) {
-  //   return;
-  // }
-
-  // const container = event.target as HTMLDivElement;
-  // const viewport = container.querySelector(
-  //   ".react-diagram__viewport"
-  // ) as HTMLDivElement;
-
-  // const translate = getTranslateValues(viewport?.style.transform);
-
-  // const position = {
-  //   x: (event.clientX - distance.x - translate.x) / translate.scale,
-  //   y: (event.clientY - distance.y - translate.y) / translate.scale,
-  // };
-
-  // const newNode = {
-  //   id: getId(piece.id),
-  //   type,
-  //   position,
-  //   data: {
-  //     piece,
-  //     size: pieceSize,
-  //   },
-  // };
-
-  // pieceSizeRef.current = pieceSize;
-  // setNodes((nds) => nds.concat(newNode));
-  // event.dataTransfer.effectAllowed = "none";
-  // }, []);
 
   const onNodeDragEnd = useCallback(
     (_: unknown, node: Node) => {
@@ -355,6 +246,13 @@ const PuzzleDiagram = ({
     [nodes]
   );
 
+  useEffect(() => {
+    if (!puzzleNode) return;
+
+    setNodes((nds) => nds.concat(puzzleNode));
+    onUpdateSuccess();
+  }, [puzzleNode]);
+
   return (
     <ReactDiagram
       ref={ref}
@@ -364,7 +262,6 @@ const PuzzleDiagram = ({
       connectionRadius={connectionRadius}
       minZoom={1}
       maxZoom={2}
-      onMouseUp={handleMouseUp}
       onNodesChange={onNodesChange}
       onEdgeUpdate={onEdgeUpdate}
       onEdgeUpdateStart={onEdgeUpdateStart}
