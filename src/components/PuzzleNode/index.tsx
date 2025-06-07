@@ -4,8 +4,8 @@ import styles from "./style.module.css";
 import { PieceSize, PuzzleEdge, PuzzlePiece } from "../PuzzleGenerator";
 import { CSSProperties } from "react";
 
-import "./style.css";
 import { EdgePosition } from "../PuzzleGenerator/type";
+import "./style.css";
 
 export type HighlightedPort = {
   position: EdgePosition;

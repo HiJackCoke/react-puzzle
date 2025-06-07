@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef } from "react";
 
 import ReactDiagram, {
   Connection,
-  Edge,
+  // Edge,
   Node,
-  updateEdge,
-  useEdgesState,
+  // updateEdge,
+  // useEdgesState,
   useNodesState,
 } from "react-cosmos-diagram";
 
@@ -30,11 +30,11 @@ interface Props {
 }
 const PuzzleDiagram = ({ puzzleNode, onUpdateSuccess }: Props) => {
   const ref = useRef<HTMLDivElement>(null);
-  const edgeUpdateSuccessful = useRef(true);
+  // const edgeUpdateSuccessful = useRef(true);
   const nodeMap = useRef(new Map<string, string[]>([]));
 
   const [nodes, setNodes, onNodesChange] = useNodesState<NodeData>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  // const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
   const onConnect = useCallback((params: Connection) => {
     const { source, target, sourcePort, targetPort } = params;
@@ -88,26 +88,26 @@ const PuzzleDiagram = ({ puzzleNode, onUpdateSuccess }: Props) => {
     });
   }, []);
 
-  const onEdgeUpdateStart = useCallback(() => {
-    edgeUpdateSuccessful.current = false;
-  }, []);
+  // const onEdgeUpdateStart = useCallback(() => {
+  //   edgeUpdateSuccessful.current = false;
+  // }, []);
 
-  const onEdgeUpdate = useCallback(
-    (originEdge: Edge, newConnection: Connection) => {
-      edgeUpdateSuccessful.current = true;
+  // const onEdgeUpdate = useCallback(
+  //   (originEdge: Edge, newConnection: Connection) => {
+  //     edgeUpdateSuccessful.current = true;
 
-      setEdges((els) => updateEdge(originEdge, newConnection, els));
-    },
-    []
-  );
+  //     setEdges((els) => updateEdge(originEdge, newConnection, els));
+  //   },
+  //   []
+  // );
 
-  const onEdgeUpdateEnd = useCallback((_c: unknown, edge: Edge) => {
-    if (!edgeUpdateSuccessful.current) {
-      setEdges((eds) => eds.filter((e) => e.id !== edge.id));
-    }
+  // const onEdgeUpdateEnd = useCallback((_c: unknown, edge: Edge) => {
+  //   if (!edgeUpdateSuccessful.current) {
+  //     setEdges((eds) => eds.filter((e) => e.id !== edge.id));
+  //   }
 
-    edgeUpdateSuccessful.current = true;
-  }, []);
+  //   edgeUpdateSuccessful.current = true;
+  // }, []);
 
   const onNodeDragEnd = useCallback(
     (_: unknown, node: Node) => {
@@ -243,16 +243,16 @@ const PuzzleDiagram = ({ puzzleNode, onUpdateSuccess }: Props) => {
     <ReactDiagram
       ref={ref}
       nodes={nodes}
-      edges={edges}
+      // edges={edges}
       nodeTypes={nodeTypes}
       connectionRadius={connectionRadius}
       minZoom={1}
       maxZoom={2}
       onNodesChange={onNodesChange}
-      onEdgeUpdate={onEdgeUpdate}
-      onEdgeUpdateStart={onEdgeUpdateStart}
-      onEdgeUpdateEnd={onEdgeUpdateEnd}
-      onEdgesChange={onEdgesChange}
+      // onEdgeUpdate={onEdgeUpdate}
+      // onEdgeUpdateStart={onEdgeUpdateStart}
+      // onEdgeUpdateEnd={onEdgeUpdateEnd}
+      // onEdgesChange={onEdgesChange}
       onConnect={onConnect}
       onNodeDragEnd={onNodeDragEnd}
       onNodeDrag={onNodeDrag}
