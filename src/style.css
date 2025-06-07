@@ -4,18 +4,9 @@ input {
 
 .react-diagram {
   z-index: 9999;
-
-  @media screen and (max-width: 768px) {
-    height: 70%;
-  }
 }
 
 .dnd-container {
   display: flex;
-
   height: 100%;
-
-  /* @media screen and (max-width: 768px) {
-    flex-direction: column-reverse;
-  } */
 }

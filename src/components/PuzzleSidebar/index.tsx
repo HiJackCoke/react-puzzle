@@ -18,7 +18,7 @@ interface Props {
 }
 
 function PuzzleSidebar({ activeId, pieces, onImageChange }: Props) {
-  // const [pieces, setPieces] = useState<PuzzlePiece[]>([]);
+  const [isOpen, setIsOpen] = useState(true);
   const [sizes, setSizes] = useState<PieceSize>({
     totalSize: 0,
     pieceSize: 0,
@@ -27,7 +27,6 @@ function PuzzleSidebar({ activeId, pieces, onImageChange }: Props) {
 
   const handlePuzzleUpdate: OnImageUpdate = (pieces, size) => {
     onImageChange?.(pieces, size);
-    // setPieces(pieces);
     setSizes(size);
   };
 
@@ -35,27 +34,39 @@ function PuzzleSidebar({ activeId, pieces, onImageChange }: Props) {
 
   return (
     <>
-      <SortableContext
-        id="pieces"
-        items={pieces}
-        strategy={rectSortingStrategy}
+      <aside
+        className={`${styles.container} ${
+          isOpen ? styles.open : styles.closed
+        }`}
       >
-        <aside className={styles.container}>
+        <button
+          className={styles["toggle-button"]}
+          onClick={() => setIsOpen(!isOpen)}
+          aria-label={isOpen ? "사이드바 닫기" : "사이드바 열기"}
+        >
+          {isOpen ? "←" : "→"}
+        </button>
+        <div className={styles.content}>
           <PuzzleGenerator onImageUpdate={handlePuzzleUpdate} />
-
           <div className={styles["puzzle-wrapper"]}>
-            {pieces.map((piece) => (
-              <PuzzleNodeView
-                key={piece.id}
-                id={piece.id}
-                isDragging={activeId === piece.id}
-                sizes={sizes}
-                piece={piece}
-              />
-            ))}
+            <SortableContext
+              id="pieces"
+              items={pieces}
+              strategy={rectSortingStrategy}
+            >
+              {pieces.map((piece) => (
+                <PuzzleNodeView
+                  key={piece.id}
+                  id={piece.id}
+                  isDragging={activeId === piece.id}
+                  sizes={sizes}
+                  piece={piece}
+                />
+              ))}
+            </SortableContext>
           </div>
-        </aside>
-      </SortableContext>
+        </div>
+      </aside>
 
       {activeId && activePiece ? (
         <DragOverlay dropAnimation={{ duration: 0 }}>
