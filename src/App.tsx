@@ -42,6 +42,18 @@ const getTranslateValues = (transformString: string) => {
   return { x, y, scale };
 };
 
+const getTranslateXYValues = (element: HTMLElement | null) => {
+  if (!element) return { x: 0, y: 0, z: 0 };
+  const style = window.getComputedStyle(element);
+  const matrix = new WebKitCSSMatrix(style.transform);
+
+  return {
+    x: matrix.m41, // translateX
+    y: matrix.m42, // translateY
+    z: matrix.m43,
+  };
+};
+
 const hasMouseSupport = (): boolean => {
   const hasPointerFine = window.matchMedia("(pointer: fine)").matches;
 
@@ -97,11 +109,20 @@ function App() {
         y: pointerEvent.layerY,
       });
     } else {
-      const pointerEvent = activatorEvent as TouchEvent;
+      const touchEvent = activatorEvent as TouchEvent;
+      const touch = touchEvent.touches[0];
+
+      const target = activatorEvent.target as HTMLElement;
+
+      const { x, y } = getTranslateXYValues(target.parentElement);
+      const rect = target.getBoundingClientRect();
+
+      const layerX = touch.clientX - rect.left + x;
+      const layerY = touch.clientY - rect.top + y;
 
       setDistance({
-        x: pointerEvent.touches[0].radiusX,
-        y: pointerEvent.touches[0].radiusY,
+        x: layerX,
+        y: layerY,
       });
     }
 
