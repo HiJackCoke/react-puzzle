@@ -54,9 +54,9 @@ export const getSnapPosition = (
 export const findClosestConnections = (
   draggedNode: Node<NodeData>,
   nodes: Node<NodeData>[],
-  pieceSize: number,
   connectionRadius: number
 ): ClosestConnection[] => {
+  const pieceSize = nodes[0].data.size.pieceSize;
   const connections: ClosestConnection[] = [];
 
   const draggedPiece = draggedNode.data.piece;
@@ -93,6 +93,7 @@ export const findClosestConnections = (
           targetEdgePosition,
           pieceSize
         );
+
         const distance = getDistance(draggedPort, targetPort);
 
         if (distance < connectionRadius) {
@@ -108,12 +109,12 @@ export const findClosestConnections = (
     }
   }
 
-        const minDistance = Math.min(
-        ...connections.map((connection) => connection.distance)
-      );
-      const closestConnections = connections.filter(
-        (connection) => connection.distance === minDistance
-      );
+  const minDistance = Math.min(
+    ...connections.map((connection) => connection.distance)
+  );
+  const closestConnections = connections.filter(
+    (connection) => connection.distance === minDistance
+  );
 
   return closestConnections;
 };

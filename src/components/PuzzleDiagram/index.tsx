@@ -11,8 +11,6 @@ import ReactDiagram, {
 
 import PuzzleNode, { NodeData, HighlightedPort } from "../PuzzleNode";
 
-import { PieceSize } from "../PuzzleGenerator";
-
 import { EdgePosition } from "../PuzzleGenerator/type";
 import { isOppositePosition } from "../PuzzleGenerator/utils";
 import { findClosestConnections, getSnapPosition } from "../PuzzleNode/utils";
@@ -30,20 +28,10 @@ interface Props {
 
   onUpdateSuccess: () => void;
 }
-const PuzzleDiagram = ({
-  puzzleNode,
-
-  onUpdateSuccess,
-}: Props) => {
+const PuzzleDiagram = ({ puzzleNode, onUpdateSuccess }: Props) => {
   const ref = useRef<HTMLDivElement>(null);
   const edgeUpdateSuccessful = useRef(true);
   const nodeMap = useRef(new Map<string, string[]>([]));
-
-  const pieceSizeRef = useRef<PieceSize>({
-    tabSize: 0,
-    totalSize: 0,
-    pieceSize: 0,
-  });
 
   const [nodes, setNodes, onNodesChange] = useNodesState<NodeData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -71,23 +59,23 @@ const PuzzleDiagram = ({
       let offsetY = 0;
 
       if (targetEdgePosition === "left") {
-        offsetX = draggedNode.position.x + pieceSizeRef.current.pieceSize;
+        offsetX = draggedNode.position.x + nodes[0].data.size.pieceSize;
         offsetY = draggedNode.position.y;
       }
 
       if (targetEdgePosition === "right") {
-        offsetX = draggedNode.position.x - pieceSizeRef.current.pieceSize;
+        offsetX = draggedNode.position.x - nodes[0].data.size.pieceSize;
         offsetY = draggedNode.position.y;
       }
 
       if (targetEdgePosition === "top") {
         offsetX = draggedNode.position.x;
-        offsetY = draggedNode.position.y + pieceSizeRef.current.pieceSize;
+        offsetY = draggedNode.position.y + nodes[0].data.size.pieceSize;
       }
 
       if (targetEdgePosition === "bottom") {
         offsetX = draggedNode.position.x;
-        offsetY = draggedNode.position.y - pieceSizeRef.current.pieceSize;
+        offsetY = draggedNode.position.y - nodes[0].data.size.pieceSize;
       }
 
       return nodes.map((node) => {
@@ -133,7 +121,6 @@ const PuzzleDiagram = ({
       const connections = findClosestConnections(
         node as Node<NodeData>,
         nodes,
-        pieceSizeRef.current.pieceSize,
         connectionRadius
       );
 
@@ -149,7 +136,7 @@ const PuzzleDiagram = ({
       const snapPosition = getSnapPosition(
         targetNode,
         draggedEdgePosition,
-        pieceSizeRef.current.pieceSize
+        nodes[0].data.size.pieceSize
       );
 
       const draggedNodes = nodeMap.current.get(draggedNode.id) ?? [];
@@ -188,7 +175,7 @@ const PuzzleDiagram = ({
         })
       );
     },
-    [nodes, onConnect]
+    [nodes]
   );
 
   const onNodeDrag = useCallback(
@@ -196,7 +183,6 @@ const PuzzleDiagram = ({
       const connections = findClosestConnections(
         node as Node<NodeData>,
         nodes,
-        pieceSizeRef.current.pieceSize,
         connectionRadius
       );
 
