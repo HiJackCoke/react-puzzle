@@ -127,6 +127,11 @@ function App() {
       ".react-diagram__viewport"
     ) as HTMLDivElement;
 
+    if (!viewport) return;
+
+    const isIn = x < viewport.offsetWidth && y < viewport.offsetHeight;
+    if (!isIn) return;
+
     const translate = getTranslateValues(viewport?.style.transform);
     const position = {
       x: (x - distance.x - translate.x) / translate.scale,
@@ -144,6 +149,7 @@ function App() {
     };
 
     setPuzzleNode(newNode);
+    setPieces((pieces) => pieces.filter((piece) => piece.id !== activeId));
   };
   const handleMouseUp: MouseEventHandler<HTMLDivElement> = (e) => {
     handleNodeUpdate({ x: e.clientX, y: e.clientY });
@@ -157,8 +163,6 @@ function App() {
   };
 
   const handleUpdateSuccess = () => {
-    setPieces((pieces) => pieces.filter((piece) => piece.id !== activeId));
-
     setActiveId(null);
     setDroppedPuzzle(null);
     setDistance(null);
